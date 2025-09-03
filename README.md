@@ -8,11 +8,8 @@ usage:
  ipsecvici [action] [connection]
  
  action: 0 load connection
- 
-		1 unload connection
-  
+ 		1 unload connection 
 		2 terminate connection
-  
 		3 list connection details
   
  connection: ike connection name in ipsec uci config file
