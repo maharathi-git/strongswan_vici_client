@@ -14,6 +14,9 @@
 #define STATUS_FILE "/var/log/tunnel_status.csv"
 #define UCI_CONFIG "/etc/config/ipsec"
 
+/**
+ * ike conn info struct
+ */
 typedef struct {
     char name[64];
     int enabled; // 1 for enabled, 0 for disabled
@@ -31,6 +34,11 @@ typedef struct {
 Tunnel tunnels[MAX_TUNNELS];
 int tunnel_count = 0;
 
+/**
+ * @brief      Gets the cpu uptime.
+ *
+ * @return     The uptime.
+ */
 double get_uptime()
 {
     FILE *fp = fopen("/proc/uptime", "r");
@@ -48,6 +56,13 @@ double get_uptime()
     return uptime;
 }
 
+/**
+ * @brief      formats the given cpu time to DD:HH:MM:SS
+ *
+ * @param[in]  seconds  The seconds
+ * @param      buffer   The buffer
+ * @param[in]  len      The length
+ */
 void format_uptime(double seconds, char *buffer, size_t len)
 {
     int days = (int)(seconds / (24 * 3600));
@@ -60,6 +75,13 @@ void format_uptime(double seconds, char *buffer, size_t len)
     snprintf(buffer, len, "%02d:%02d:%02d:%02d", days, hours, minutes, secs);
 }
 
+/**
+ * @brief      remove a traffic selector
+ *
+ * @param      ts       traffic selector
+ * @param[in]  value    The value
+ * @param[in]  ts_size  The ts size
+ */
 void remove_ts(char *ts, const char *value, size_t ts_size)
 {
     char *pos = strstr(ts, value);
@@ -71,6 +93,9 @@ void remove_ts(char *ts, const char *value, size_t ts_size)
     memmove(start, end, strlen(end) + 1);
 }
 
+/**
+ * @brief      read & load all the ike conns from ipsec uci config file
+ */
 void load_uci_config()
 {
     FILE *fp = fopen(UCI_CONFIG, "r");
@@ -110,6 +135,9 @@ void load_uci_config()
     fclose(fp);
 }
 
+/**
+ * @brief      save the ike conn status to file
+ */
 void save_tunnel_status()
 {
     FILE *fp = fopen(STATUS_FILE, "w");
@@ -129,6 +157,13 @@ void save_tunnel_status()
     fclose(fp);
 }
 
+/**
+ * @brief      update the ike conn info
+ *
+ * @param      name   The ike conn name
+ * @param      key    The key
+ * @param      value  The value
+ */
 void update_tunnel(char *name, char *key, char *value)
 {
     // if (!name || name[0] == '\0') return;
@@ -271,6 +306,17 @@ void send_sigint() {
     kill(0, SIGINT);
 }
 
+/**
+ * @brief      list the sa values
+ *
+ * @param      user   The user
+ * @param      res    The resource
+ * @param      name   The name
+ * @param      value  The value
+ * @param[in]  len    The length
+ *
+ * @return     0/1 on success/failure
+ */
 static int sa_values(void *user, vici_res_t *res, char *name, void *value, int len)
 {
     char *tunnel_name = (char *)user;
@@ -282,6 +328,17 @@ static int sa_values(void *user, vici_res_t *res, char *name, void *value, int l
     return 0;
 }
 
+/**
+ * @brief      list the sa list type values
+ *
+ * @param      user   The user
+ * @param      res    The resource
+ * @param      name   The name
+ * @param      value  The value
+ * @param[in]  len    The length
+ *
+ * @return     { description_of_the_return_value }
+ */
 static int sa_list(void *user, vici_res_t *res, char *name, void *value, int len)
 {
     char *tunnel_name = (char *)user;
@@ -293,17 +350,44 @@ static int sa_list(void *user, vici_res_t *res, char *name, void *value, int len
     return 0;
 }
 
+/**
+ * @brief      child sa
+ *
+ * @param      user  The user
+ * @param      res   The resource
+ * @param      name  The name
+ *
+ * @return     { description_of_the_return_value }
+ */
 static int child_sas(void *user, vici_res_t *res, char *name)
 {
     // fprintf(stderr, "child=%s\n", name);
     return vici_parse_cb(res, NULL, NULL, sa_list, user);
 }
 
+/**
+ * @brief      ike sa
+ *
+ * @param      user  The user
+ * @param      res   The resource
+ * @param      name  The name
+ *
+ * @return     { description_of_the_return_value }
+ */
 static int ike_sa(void *user, vici_res_t *res, char *name)
 {
     return vici_parse_cb(res, child_sas, NULL, sa_list, user);
 }
 
+/**
+ * @brief      ike sas
+ *
+ * @param      user  The user
+ * @param      res   The resource
+ * @param      name  The name
+ *
+ * @return     { description_of_the_return_value }
+ */
 static int ike_sas(void *user, vici_res_t *res, char *name)
 {
     if (*(int *)user) {
@@ -314,6 +398,13 @@ static int ike_sas(void *user, vici_res_t *res, char *name)
     return 0;
 }
 
+/**
+ * @brief      call back function to list ike sa values
+ *
+ * @param      user  The user
+ * @param      name  The name
+ * @param      res   The resource
+ */
 static void list_cb(void *user, char *name, vici_res_t *res)
 {
     int f = 1;
@@ -322,6 +413,13 @@ static void list_cb(void *user, char *name, vici_res_t *res)
     }
 }
 
+/**
+ * @brief      call back funtion to list ike child sa values
+ *
+ * @param      user  The user
+ * @param      name  The name
+ * @param      res   The resource
+ */
 static void list_child(void *user, char *name, vici_res_t *res)
 {
     int f = 0;
@@ -341,6 +439,13 @@ void close_cb(void *ret)
     send_sigint();
 }
 
+/**
+ * @brief      monitor the sas, registers for ike and child sa updown
+ *
+ * @param      conn  The connection
+ *
+ * @return     0/1 on success/failure
+ */
 static int monitor_sas(vici_conn_t *conn)
 {
     int ret = 0;
@@ -360,6 +465,9 @@ static int monitor_sas(vici_conn_t *conn)
     return ret;
 }
 
+/**
+ * @brief      daemonize the process
+ */
 void daemonize()
 {
     pid_t pid = fork();
