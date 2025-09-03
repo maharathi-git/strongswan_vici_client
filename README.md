@@ -6,6 +6,7 @@
 
 usage:
  ipsecvici [action] [connection]
+ 
  action: 0 load connection
 		1 unload connection
 		2 terminate connection
