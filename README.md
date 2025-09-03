@@ -5,14 +5,18 @@
  -remember this is made for custom openwrt, and configuration is also custom.
 
 usage:
- ipsecvici [action] [connection]
+
+	ipsecvici [action] [connection]
  
- action: 0 load connection
+ 	action: 0 load connection
+
  		1 unload connection 
+   
 		2 terminate connection
-		3 list connection details
   
- connection: ike connection name in ipsec uci config file
+		3 list connection details
+
+ 	connection: ike connection name in ipsec uci config file
 
 # uptime
 - uptime.c is designed to track the uptime of all the configured ike connections.
