@@ -27,4 +27,5 @@ usage:
 - this runs only if charon daemon is alive, and stops on charon daemon termination
 
 usage:
- compile and run this program after running charon daemon and before establishing any ike connections
+
+	compile and run this program after running charon daemon and before establishing any ike connections
